@@ -1,0 +1,8 @@
+docker-compose-prod.yml
+docker-compose-staging.yml
+Dockerfile
+prod.Dockerfile
+temp.Dockerfile
+staging-compose.yml
+compose.yml
+.gitlab-ci.yml

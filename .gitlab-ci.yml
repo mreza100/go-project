@@ -1,0 +1,52 @@
+# This file is a template, and might need editing before it works on your project.
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Docker.gitlab-ci.yml
+
+# Build a Docker image with CI/CD and push to the GitLab registry.
+# Docker-in-Docker documentation: https://docs.gitlab.com/ee/ci/docker/using_docker_build.html
+#
+# This template uses one generic job with conditional builds
+# for the default branch and all other (MR) branches.
+stages:
+  - build
+  - deploy
+
+staging-build:
+  stage: build
+  before_script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+  variables:
+    IMAGE_NAME: "waringin-be"
+    CI_PROJECT_PATH: "waringin"
+  script:
+    - cp $ENV_STAGING .env
+    # BUILD IMAGE WITH COMMIT SHA
+    - docker buildx build -t $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME:$CI_JOB_ID --build-arg BUILDKIT_INLINE_CACHE=1 .
+
+    # RETAG IMAGE LATEST WITH DIGEST FROM PREVIOUS IMAGE
+    #- IMAGE_ID=$(docker images | grep $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME | awk '{print $3}')
+    - docker tag $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME:$CI_JOB_ID $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME:staging
+
+    # PUSH IMAGE COMMIT SHA and LATEST
+    - docker push $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME:$CI_JOB_ID
+    - docker push $CI_REGISTRY/$CI_PROJECT_PATH/$IMAGE_NAME:staging
+  tags:
+    - staging
+  only:
+    - staging
+
+staging-deployment:
+  stage: deploy
+  environment:
+    name: staging
+    url: https://waringin-api.staging.microad.co.id:444
+  script:
+    - docker system prune -f
+    - docker-compose pull
+    - docker-compose up -d
+  tags:
+    - staging
+  only:
+    - staging

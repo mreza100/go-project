@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  waringin_backend:
+    image: registry.microad.co.id/waringin/waringin-be:staging
+    ports:
+      - 6000:6000
+    restart: always
+    container_name: waringin_be
+    networks:
+        - staging-php-network
+
+networks:
+  staging-php-network:
+    external: true
+    name: docker-staging-php
